@@ -67,7 +67,7 @@ st.set_page_config(
 # ---------------------------------------------------------------------------
 # Data loading (with error handling)
 # ---------------------------------------------------------------------------
-@st.cache_data(show_caption=False, max_entries=1)
+@st.cache_data(show_spinner="Loading data...")
 def _load_cached_data(force_refresh: bool = False) -> tuple[pd.DataFrame, CacheMetadata, list[str]]:
     """Wrapper for load_dataframe that Streamlit can cache."""
     return load_dataframe(force_refresh=force_refresh)
@@ -252,7 +252,7 @@ fig.update_layout(
     template="plotly_white",
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width="stretch")
 
 
 # ---------------------------------------------------------------------------
