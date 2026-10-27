@@ -65,10 +65,12 @@ class TestFormatKPI:
         assert format_kpi(3.75, "%") == "3.8%"
 
     def test_format_k_persons(self):
-        assert format_kpi(17386.0, "K persons") == "17,386.0K persons"
+        # 17386.0K persons = 17.4M people
+        assert format_kpi(17386.0, "K persons") == "17.4M people"
 
     def test_format_k_persons_large_number(self):
-        assert format_kpi(1234567.8, "K persons") == "1,234,567.8K persons"
+        # 1234567.8K persons = 1234.6M people
+        assert format_kpi(1234567.8, "K persons") == "1234.6M people"
 
     def test_format_none_value(self):
         assert format_kpi(None, "%") == "N/A"

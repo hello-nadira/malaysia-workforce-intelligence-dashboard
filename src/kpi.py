@@ -134,13 +134,13 @@ def format_kpi(value: float | None, unit: str) -> str:
     Format a KPI value with its unit.
 
     - For '%' units: show with 1 decimal place (e.g. "3.1%")
-    - For 'K persons' units: show with thousands separator (e.g. "17,386.0K persons")
+    - For 'K persons' units: show in readable form (e.g. "17.4M people")
     - For None: return "N/A"
 
     Parameters
     ----------
     value : float or None
-        The raw numeric value.
+        The raw numeric value (in the unit specified).
     unit : str
         The unit string from config (e.g. "%", "K persons")
 
@@ -154,8 +154,12 @@ def format_kpi(value: float | None, unit: str) -> str:
     if unit == "%":
         return f"{value:.1f}%"
     elif unit == "K persons":
-        return f"{value:,.1f}K persons"
+        # Convert thousands to a more readable format
+        # e.g. 17386.0 (thousands) -> "17.4M people"
+        millions = value / 1000.0
+        return f"{millions:.1f}M people"
     else:
+        # Generic fallback for unknown units
         return f"{value:,.1f} {unit}"
 
 
@@ -203,8 +207,7 @@ def format_change(kpi_key: str, change: KPIChange) -> str:
         if (change.delta_percent is not None
                 and not pd.isna(change.delta_percent)
                 and change.previous_value != 0):
-            sign = "+" if change.delta_percent >= 0 else ""
-            rel_pct_str = f" ({sign}{change.delta_percent:+.1f}%)"
+            rel_pct_str = f" ({change.delta_percent:+.1f}%)"
 
         # Trend-break warning
         break_flag = ""
@@ -224,8 +227,8 @@ def format_change(kpi_key: str, change: KPIChange) -> str:
         else:
             direction = "\u2192"   # →
 
-        sign = "+" if change.delta_percent >= 0 else ""
-        return f"{direction} {sign}{abs(change.delta_percent):.1f}%"
+        # Use :+.1f which already includes the sign
+        return f"{direction} {change.delta_percent:+.1f}%"
 
 
 # ---------------------------------------------------------------------------

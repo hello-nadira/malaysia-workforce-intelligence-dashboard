@@ -124,7 +124,6 @@ with st.sidebar:
     )
 
     st.divider()
-    st.caption(f"Data source: {config.SOURCE_NAME}")
     st.caption(f"License: {config.LICENSE}")
 
 
@@ -171,7 +170,7 @@ st.markdown(
 latest_obs = get_latest_observation_date(df)
 available_start, available_end = get_available_date_range(df)
 
-st.subheader("📈 Key Metrics (Latest)")
+st.subheader(f"📈 Key Metrics (Latest: {latest_obs.strftime('%B %Y')})")
 
 # Use columns for 4 KPI cards
 cols = st.columns(4)
@@ -187,9 +186,12 @@ for i, kpi_key in enumerate(config.DISPLAY_KPI_KEYS):
     formatted_mom = format_change(kpi_key, mom_change)
     formatted_yoy = format_change(kpi_key, yoy_change)
 
+    # Show observation month alongside the metric label
+    obs_label = f"{kpi_def['label']} — {latest_obs.strftime('%b %Y')}"
+
     with cols[i]:
         st.metric(
-            label=kpi_def["label"],
+            label=obs_label,
             value=formatted_value,
             delta=formatted_mom,
             delta_color="normal",
