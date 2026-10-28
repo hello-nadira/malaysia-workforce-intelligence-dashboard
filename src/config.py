@@ -123,6 +123,22 @@ RATE_KPI_KEYS: set[str] = {"u_rate", "p_rate", "ep_ratio"}
 COUNT_KPI_KEYS: set[str] = {"lf", "lf_employed", "lf_unemployed", "lf_outside"}
 
 # ---------------------------------------------------------------------------
+# KPI favourability — determines chart bar color and arrow styling.
+# "up" means an *increase* is favourable for this KPI.
+# "down" means a *decrease* is favourable.
+# "neutral" means neither direction is inherently good/bad.
+# ---------------------------------------------------------------------------
+KPI_FAVORABILITY: dict[str, str] = {
+    "u_rate": "down",       # Lower unemployment is better
+    "lf": "neutral",        # Labour force size — neither good nor bad
+    "p_rate": "up",         # Higher participation is better
+    "ep_ratio": "up",       # Higher employment-to-population ratio is better
+    "lf_employed": "up",    # More employed is better
+    "lf_unemployed": "down",# Fewer unemployed is better
+    "lf_outside": "neutral",# Persons outside labour force
+}
+
+# ---------------------------------------------------------------------------
 # Chart / UI defaults
 # ---------------------------------------------------------------------------
 DEFAULT_DATE_RANGE_START: str = "2020-01-01"

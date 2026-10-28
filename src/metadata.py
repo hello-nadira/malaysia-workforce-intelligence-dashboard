@@ -58,11 +58,11 @@ def get_source_attribution() -> str:
     Return the full source attribution string for display.
 
     Example:
-        "Source: Department of Statistics Malaysia (DOSM) | "
+        "Department of Statistics Malaysia (DOSM) | "
         "License: Creative Commons Attribution 4.0 International (CC BY 4.0)"
     """
     return (
-        f"Source: {config.SOURCE_NAME} | "
+        f"{config.SOURCE_NAME} | "
         f"License: {config.LICENSE}"
     )
 

@@ -22,6 +22,9 @@ from src.kpi import (
     crosses_trend_break,
     format_change,
     format_kpi,
+    is_favorable_change,
+    get_favorability,
+    ChangeDisplay,
 )
 
 
@@ -283,11 +286,14 @@ class TestCrossesTrendBreak:
 
 
 # ---------------------------------------------------------------------------
-# format_change
+# format_change — rate KPI
 # ---------------------------------------------------------------------------
 
-class TestFormatChange:
-    def test_rate_kpi_shows_pp(self):
+class TestFormatChangeRate:
+    """Tests for format_change() with rate KPIs (percentage-point primary)."""
+
+    def test_rate_kpi_pp_is_primary(self):
+        """Rate KPI should show percentage points as the primary metric."""
         change = KPIChange(
             current_value=3.5,
             previous_value=3.0,
@@ -300,8 +306,135 @@ class TestFormatChange:
             comparison_type="MoM",
         )
         result = format_change("u_rate", change)
-        assert "0.5" in result
-        assert "pp" in result
+        assert isinstance(result, ChangeDisplay)
+        assert "0.5" in result.delta_str
+        assert "pp" in result.delta_str
+        # current 3.5 vs previous 3.0 means rate went UP
+        assert "\u2191" in result.delta_str
+
+    def test_rate_kpi_shows_up_arrow_for_increase(self):
+        """Rate increase (higher rate) shows up arrow."""
+        change = KPIChange(
+            current_value=3.5,
+            previous_value=3.0,
+            delta_value=0.5,
+            delta_percent=16.67,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
+            is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("u_rate", change)
+        assert result.delta_str.startswith("\u2191")
+        assert result.direction == "up"
+
+    def test_rate_kpi_shows_down_arrow_for_decrease(self):
+        """Rate decrease shows down arrow."""
+        change = KPIChange(
+            current_value=2.5,
+            previous_value=3.0,
+            delta_value=-0.5,
+            delta_percent=-16.67,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
+            is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("u_rate", change)
+        assert result.delta_str.startswith("\u2193")
+        assert result.direction == "down"
+
+    def test_rate_kpi_no_contradictory_arrows(self):
+        """There must be exactly one arrow — no up-down combination."""
+        change = KPIChange(
+            current_value=3.5,
+            previous_value=3.0,
+            delta_value=0.5,
+            delta_percent=16.67,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
+            is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("u_rate", change)
+        arrow_count = result.delta_str.count("\u2191") + result.delta_str.count("\u2193")
+        assert arrow_count == 1, f"Expected 1 arrow, found {arrow_count}"
+
+    def test_rate_kpi_context_shows_rel_label(self):
+        """Rate KPIs should show relative % labeled as 'rel:'."""
+        change = KPIChange(
+            current_value=3.5,
+            previous_value=3.0,
+            delta_value=0.5,
+            delta_percent=16.67,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
+            is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("u_rate", change)
+        assert "rel:" in result.context_str
+        assert "16.7" in result.context_str
+
+    def test_rate_kpi_no_context_when_no_relative_change(self):
+        """If delta_percent is None, context_str should be empty."""
+        change = KPIChange(
+            current_value=3.5,
+            previous_value=3.0,
+            delta_value=0.5,
+            delta_percent=None,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
+            is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("u_rate", change)
+        assert result.context_str == ""
+
+    def test_rate_kpi_break_flag_present(self):
+        """Trend-break flag should be in break_flag."""
+        change = KPIChange(
+            current_value=4.0,
+            previous_value=3.5,
+            delta_value=0.5,
+            delta_percent=14.29,
+            current_date=pd.Timestamp("2025-01-01"),
+            previous_date=pd.Timestamp("2024-12-01"),
+            crosses_trend_break=True,
+            is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("u_rate", change)
+        assert "trend-break" in result.break_flag
+
+    def test_rate_kpi_no_break_flag(self):
+        """No trend-break when not crossing the boundary."""
+        change = KPIChange(
+            current_value=3.5,
+            previous_value=3.0,
+            delta_value=0.5,
+            delta_percent=16.67,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
+            is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("u_rate", change)
+        assert result.break_flag == ""
+
+
+# ---------------------------------------------------------------------------
+# format_change — count KPI
+# ---------------------------------------------------------------------------
+
+class TestFormatChangeCount:
+    """Tests for format_change() with count KPIs (relative % primary)."""
 
     def test_count_kpi_shows_percent(self):
         change = KPIChange(
@@ -316,10 +449,80 @@ class TestFormatChange:
             comparison_type="MoM",
         )
         result = format_change("lf", change)
-        assert "4.8" in result  # 4.76 rounds to 4.8
-        assert "%" in result
-        assert "pp" not in result
+        assert isinstance(result, ChangeDisplay)
+        assert "4.8" in result.delta_str
+        assert "%" in result.delta_str
+        assert "pp" not in result.delta_str
 
+    def test_count_kpi_shows_up_arrow(self):
+        change = KPIChange(
+            current_value=110.0,
+            previous_value=105.0,
+            delta_value=5.0,
+            delta_percent=4.76,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
+            is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("lf", change)
+        assert result.delta_str.startswith("\u2191")
+        assert result.is_favorable is True
+
+    def test_count_kpi_shows_down_arrow(self):
+        change = KPIChange(
+            current_value=105.0,
+            previous_value=110.0,
+            delta_value=-5.0,
+            delta_percent=-4.76,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
+            is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("lf", change)
+        assert result.delta_str.startswith("\u2193")
+        assert result.is_favorable is True
+
+    def test_count_kpi_no_contradictory_arrows(self):
+        change = KPIChange(
+            current_value=110.0,
+            previous_value=105.0,
+            delta_value=5.0,
+            delta_percent=4.76,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
+            is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("lf", change)
+        arrow_count = result.delta_str.count("\u2191") + result.delta_str.count("\u2193")
+        assert arrow_count == 1
+
+    def test_count_kpi_no_context_str(self):
+        change = KPIChange(
+            current_value=110.0,
+            previous_value=105.0,
+            delta_value=5.0,
+            delta_percent=4.76,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
+            is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("lf", change)
+        assert result.context_str == ""
+
+
+# ---------------------------------------------------------------------------
+# format_change — missing / edge cases
+# ---------------------------------------------------------------------------
+
+class TestFormatChangeEdgeCases:
     def test_missing_comparison_returns_na(self):
         change = KPIChange(
             current_value=3.5,
@@ -333,22 +536,176 @@ class TestFormatChange:
             comparison_type="MoM",
         )
         result = format_change("u_rate", change)
-        assert result == "N/A"
+        assert isinstance(result, ChangeDisplay)
+        assert result.delta_str == "N/A"
+        assert result.direction == "none"
 
-    def test_trend_break_flagged(self):
+    def test_none_current_value_returns_na(self):
         change = KPIChange(
-            current_value=4.0,
+            current_value=None,
+            previous_value=3.0,
+            delta_value=None,
+            delta_percent=None,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
+            is_missing_comparison=True,
+            comparison_type="MoM",
+        )
+        result = format_change("u_rate", change)
+        assert result.delta_str == "N/A"
+
+    def test_zero_delta_shows_neutral_arrow(self):
+        """Zero change shows right arrow and direction 'none'."""
+        change = KPIChange(
+            current_value=3.5,
             previous_value=3.5,
-            delta_value=0.5,
-            delta_percent=14.29,
-            current_date=pd.Timestamp("2025-01-01"),
-            previous_date=pd.Timestamp("2024-12-01"),
-            crosses_trend_break=True,
+            delta_value=0.0,
+            delta_percent=0.0,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
             is_missing_comparison=False,
             comparison_type="MoM",
         )
         result = format_change("u_rate", change)
-        assert "trend-break" in result
+        assert "\u2192" in result.delta_str
+        assert result.direction == "none"
+
+
+# ---------------------------------------------------------------------------
+# Favorability logic
+# ---------------------------------------------------------------------------
+
+class TestFavorability:
+    def test_u_rate_decrease_is_favorable(self):
+        """A decrease in unemployment rate is favorable."""
+        change = KPIChange(
+            current_value=2.5,
+            previous_value=3.0,
+            delta_value=-0.5,
+            delta_percent=-16.67,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
+            is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("u_rate", change)
+        assert result.direction == "down"
+        assert result.is_favorable is True
+
+    def test_u_rate_increase_is_not_favorable(self):
+        """An increase in unemployment rate is not favorable."""
+        change = KPIChange(
+            current_value=3.5,
+            previous_value=3.0,
+            delta_value=0.5,
+            delta_percent=16.67,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
+            is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("u_rate", change)
+        assert result.direction == "up"
+        assert result.is_favorable is False
+
+    def test_lf_increase_is_neutral(self):
+        """Labour force size change is always favorable (neutral KPI)."""
+        change = KPIChange(
+            current_value=110.0,
+            previous_value=105.0,
+            delta_value=5.0,
+            delta_percent=4.76,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
+            is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("lf", change)
+        assert result.is_favorable is True
+
+    def test_p_rate_increase_is_favorable(self):
+        """Increase in participation rate is favorable."""
+        change = KPIChange(
+            current_value=66.0,
+            previous_value=65.0,
+            delta_value=1.0,
+            delta_percent=1.54,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
+            is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("p_rate", change)
+        assert result.is_favorable is True
+
+    def test_ep_ratio_decrease_is_not_favorable(self):
+        """Decrease in employment-to-population ratio is not favorable."""
+        change = KPIChange(
+            current_value=62.0,
+            previous_value=63.0,
+            delta_value=-1.0,
+            delta_percent=-1.59,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
+            is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("ep_ratio", change)
+        assert result.direction == "down"
+        assert result.is_favorable is False
+
+
+# ---------------------------------------------------------------------------
+# End-to-end: compute_mom_change + format_change integration
+# ---------------------------------------------------------------------------
+
+class TestMoMFormatIntegration:
+    """Integration tests: compute_mom_change results fed to format_change."""
+
+    def test_mom_rate_arrow_direction(self):
+        """Feb 2025 u_rate (3.5) vs Jan 2025 (4.0): rate decreased by 0.5pp."""
+        df = _make_test_df()
+        df_recent = df.tail(2)
+        change = compute_mom_change(df_recent, "u_rate")
+
+        assert change.delta_value == pytest.approx(-0.5)
+
+        display = format_change("u_rate", change)
+        assert display.delta_str.startswith("\u2193")
+        assert "0.5" in display.delta_str
+        assert "pp" in display.delta_str
+        assert display.direction == "down"
+        assert display.is_favorable is True
+
+    def test_mom_count_arrow_direction(self):
+        """Feb 2025 lf (110) vs Jan 2025 (105): increased by ~4.76%."""
+        df = _make_test_df()
+        df_recent = df.tail(2)
+        change = compute_mom_change(df_recent, "lf")
+
+        assert change.delta_percent == pytest.approx(4.76, rel=0.01)
+
+        display = format_change("lf", change)
+        assert display.delta_str.startswith("\u2191")
+        assert "4.8" in display.delta_str
+        assert display.is_favorable is True
+
+    def test_mom_crosses_trend_break(self):
+        """Jan 2025 vs Jan 2024 for u_rate crosses trend break."""
+        df = _make_test_df()
+        df_subset = df.iloc[[0, 2]]  # Jan 2024, Jan 2025
+        change = compute_mom_change(df_subset, "u_rate")
+        assert change.crosses_trend_break is True
+
+        display = format_change("u_rate", change)
+        assert "trend-break" in display.break_flag
 
 
 

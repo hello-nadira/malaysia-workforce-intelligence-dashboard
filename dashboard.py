@@ -43,6 +43,8 @@ from src.kpi import (
     format_kpi,
     get_available_date_range,
     get_latest_kpi,
+    get_favorability,
+    is_favorable_change,
 )
 from src.metadata import (
     get_data_summary_text,
@@ -183,23 +185,69 @@ for i, kpi_key in enumerate(config.DISPLAY_KPI_KEYS):
 
     unit = kpi_def["unit"]
     formatted_value = format_kpi(kpi_value.value, unit)
-    formatted_mom = format_change(kpi_key, mom_change)
-    formatted_yoy = format_change(kpi_key, yoy_change)
+    mom_display = format_change(kpi_key, mom_change)
+    yoy_display = format_change(kpi_key, yoy_change)
 
     # Show observation month alongside the metric label
     obs_label = f"{kpi_def['label']} — {latest_obs.strftime('%b %Y')}"
 
     with cols[i]:
-        st.metric(
-            label=obs_label,
-            value=formatted_value,
-            delta=formatted_mom,
-            delta_color="normal",
-        )
-        # Tooltips via st.caption
-        st.caption(f"ℹ️ {kpi_def['tooltip']}")
-        st.caption(f"MoM: {formatted_mom}")
-        st.caption(f"YoY: {formatted_yoy}")
+        # Determine delta color based on KPI favourability:
+        #   - "normal": green for positive, red for negative (default Streamlit logic)
+        #   - "inverse": green for negative, red for positive (for u_rate where decrease is good)
+        #   - "off": gray regardless (for neutral KPIs like labour force size)
+        favorability = get_favorability(kpi_key)
+        if favorability == "neutral":
+            delta_color = "off"
+        elif favorability == "down":
+            delta_color = "inverse"  # green when decrease (negative delta)
+        else:
+            delta_color = "normal"   # green when increase (positive delta)
+
+        # For st.metric color to work, we need a numeric delta.
+        # We pass the numeric change and let Streamlit color the arrow.
+        # But our delta_str already contains the formatted text with arrow.
+        # Approach: use st.metric with the string delta for display,
+        # and set delta_color based on favourability.
+        # Streamlit won't auto-color string deltas, so we use "off" for
+        # string deltas and rely on the arrow direction itself + the
+        # separate MoM/YoY caption lines for color semantics.
+        #
+        # Better approach: pass numeric delta with delta_color for coloring,
+        # use delta_description for the unit.
+        if not mom_change.is_missing_comparison:
+            if kpi_key in config.RATE_KPI_KEYS:
+                metric_delta = mom_change.delta_value  # pp
+            else:
+                metric_delta = mom_change.delta_percent  # relative %
+            st.metric(
+                label=obs_label,
+                value=formatted_value,
+                delta=metric_delta,
+                delta_color=delta_color,
+            )
+        else:
+            st.metric(
+                label=obs_label,
+                value=formatted_value,
+                delta=None,
+                delta_color="off",
+            )
+
+        # Build the secondary line: context + trend-break flag
+        secondary_parts = []
+        if mom_display.context_str:
+            secondary_parts.append(mom_display.context_str)
+        if mom_display.break_flag.strip():
+            secondary_parts.append(mom_display.break_flag.strip())
+        secondary_text = " ".join(secondary_parts) if secondary_parts else ""
+
+        if secondary_text:
+            st.caption(f"ℹ️ {secondary_text}")
+
+        # MoM and YoY with consistent labels
+        st.caption(f"MoM: {mom_display.delta_str}" + mom_display.break_flag)
+        st.caption(f"YoY: {yoy_display.delta_str}" + yoy_display.break_flag)
 
 
 # ---------------------------------------------------------------------------

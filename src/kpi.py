@@ -59,13 +59,80 @@ class KPIChange:
     comparison_type: str               # "MoM" or "YoY"
 
 
+@dataclass
+class ChangeDisplay:
+    """
+    Formatted output of format_change(), ready for display.
 
-
+    Attributes
+    ----------
+    delta_str : str
+        Primary directional string, e.g. "↓ 0.1 pp", "↑ +1.2%", "N/A"
+    context_str : str
+        Secondary labeled context for rate KPIs, e.g. "rel: +3.3%", or ""
+    direction : str
+        Internal direction code: "up", "down", or "none"
+    is_favorable : bool
+        Whether the direction is generally favorable for this KPI
+    break_flag : str
+        " *trend-break*" if comparison crosses the Jan 2025 break, else ""
+    """
+    delta_str: str
+    context_str: str
+    direction: str
+    is_favorable: bool
+    break_flag: str
 
 
 # ---------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------
+_ARROW_MAP = {"up": "\u2191", "down": "\u2193", "none": "\u2192"}
+
+
+def _arrow(direction: str) -> str:
+    """Return the Unicode arrow for a direction string."""
+    return _ARROW_MAP.get(direction, "\u2192")
+
+
+def get_favorability(kpi_key: str) -> str:
+    """
+    Return the favourability direction for a KPI.
+
+    Returns "up" if an increase is favourable, "down" if a decrease
+    is favourable, or "neutral" if neither direction is inherently
+    good or bad.
+    """
+    return config.KPI_FAVORABILITY.get(kpi_key, "neutral")
+
+
+def is_favorable_change(kpi_key: str, direction: str) -> bool:
+    """
+    Determine whether a directional change is favourable for a KPI.
+
+    Parameters
+    ----------
+    kpi_key : str
+        The KPI key (e.g. "u_rate", "lf").
+    direction : str
+        One of "up", "down", or "none".
+
+    Returns
+    -------
+    bool
+        True if the direction is favourable for this KPI.
+        Neutral KPIs always return True (no color coding).
+    """
+    favorability = get_favorability(kpi_key)
+
+    if favorability == "neutral":
+        return True  # Don't color-code neutral KPIs
+
+    if direction == "none":
+        return True
+
+    return direction == favorability
+
 
 def _get_unit(kpi_key: str) -> str:
     """Return the unit string for a KPI key (e.g. '%' or 'K persons')."""
@@ -163,72 +230,137 @@ def format_kpi(value: float | None, unit: str) -> str:
         return f"{value:,.1f} {unit}"
 
 
-def format_change(kpi_key: str, change: KPIChange) -> str:
+def get_favorability(kpi_key: str) -> str:
     """
-    Format a KPIChange for display.
+    Return the favourability direction for a KPI.
 
-    For rate KPIs:
-      - Shows delta in percentage points: "A 0.2 pp" or "V 0.3 pp"
-      - Also shows relative % change: "(+0.7%)"
-      - Appends "*trend-break" if the comparison crosses Jan 2025
+    Returns "up" if an increase is favourable, "down" if a decrease
+    is favourable, or "neutral" if neither direction is inherently
+    good or bad.
+    """
+    return config.KPI_FAVORABILITY.get(kpi_key, "neutral")
 
-    For count KPIs:
-      - Shows relative % change: "A 1.2%" or "V 0.5%"
+
+def is_favorable_change(kpi_key: str, direction: str) -> bool:
+    """
+    Determine whether a directional change is favourable for a KPI.
 
     Parameters
     ----------
     kpi_key : str
-    change : KPIChange
+        The KPI key (e.g. "u_rate", "lf").
+    direction : str
+        One of "up", "down", or "none".
 
     Returns
     -------
-    str : e.g. "A 0.2 pp (+0.7%)", "V 0.3 pp (-1.0%)", "A 1.2%", "N/A"
+    bool
+        True if the direction is favourable for this KPI.
+        Neutral KPIs always return True (no color coding).
     """
+    favorability = get_favorability(kpi_key)
+
+    if favorability == "neutral":
+        return True  # Don't color-code neutral KPIs
+
+    if direction == "none":
+        return True
+
+    return direction == favorability
+
+
+def format_change(kpi_key: str, change: KPIChange) -> ChangeDisplay:
+    """
+    Format a KPIChange for display.
+
+    Returns a ChangeDisplay dataclass with:
+    - delta_str: The primary displayed string (e.g. "↓ 0.1 pp", "↑ +1.2%")
+    - context_str: Secondary labeled context (e.g. "rel: +3.3%") or ""
+    - direction: "up", "down", or "none"
+    - is_favorable: Whether the change is generally favorable for this KPI
+    - break_flag: " *trend-break*" if comparison crosses Jan 2025, else ""
+
+    For rate KPIs:
+    - delta_str shows percentage-point change (primary)
+    - context_str shows relative % change labeled as "rel:"
+
+    For count KPIs:
+    - delta_str shows relative % change
+    - context_str is empty (no secondary metric)
+
+    If comparison is missing, returns a ChangeDisplay with delta_str="N/A".
+    """
+    na_display = ChangeDisplay(
+        delta_str="N/A",
+        context_str="",
+        direction="none",
+        is_favorable=True,
+        break_flag="",
+    )
+
     if (change.is_missing_comparison
             or change.current_value is None
             or change.previous_value is None):
-        return "N/A"
+        return na_display
 
-    # Use Unicode arrows: up arrow = increase, down arrow = decrease
+    # Trend-break warning
+    break_flag = " *trend-break*" if change.crosses_trend_break else ""
+
     if _is_rate_kpi(kpi_key):
         delta_pp = change.delta_value
         if delta_pp is None or pd.isna(delta_pp):
-            return "N/A"
+            return na_display
 
+        # Single arrow based on the primary metric (pp change)
         if delta_pp > 0:
-            direction = "\u2191"   # ↑
+            direction = "up"
         elif delta_pp < 0:
-            direction = "\u2193"   # ↓
+            direction = "down"
         else:
-            direction = "\u2192"   # →
+            direction = "none"
 
-        # Also compute relative % change for context
-        rel_pct_str = ""
+        favorable = is_favorable_change(kpi_key, direction)
+
+        delta_str = f"{_arrow(direction)} {abs(delta_pp):.1f} pp"
+
+        # Secondary: relative % change labeled as "rel:"
+        context_str = ""
         if (change.delta_percent is not None
                 and not pd.isna(change.delta_percent)
                 and change.previous_value != 0):
-            rel_pct_str = f" ({change.delta_percent:+.1f}%)"
+            context_str = f"rel: {change.delta_percent:+.1f}%"
 
-        # Trend-break warning
-        break_flag = ""
-        if change.crosses_trend_break:
-            break_flag = " *trend-break*"
-
-        return f"{direction} {abs(delta_pp):.1f} pp{rel_pct_str}{break_flag}"
+        return ChangeDisplay(
+            delta_str=delta_str,
+            context_str=context_str,
+            direction=direction,
+            is_favorable=favorable,
+            break_flag=break_flag,
+        )
 
     else:
+        # Count KPI
         if change.delta_percent is None or pd.isna(change.delta_percent):
-            return "N/A"
+            return na_display
 
         if change.delta_percent > 0:
-            direction = "\u2191"   # ↑
+            direction = "up"
         elif change.delta_percent < 0:
-            direction = "\u2193"   # ↓
+            direction = "down"
         else:
-            direction = "\u2192"   # →
+            direction = "none"
 
-        # Use :+.1f which already includes the sign
-        return f"{direction} {change.delta_percent:+.1f}%"
+        favorable = is_favorable_change(kpi_key, direction)
+
+        delta_str = f"{_arrow(direction)} {change.delta_percent:+.1f}%"
+
+        return ChangeDisplay(
+            delta_str=delta_str,
+            context_str="",
+            direction=direction,
+            is_favorable=favorable,
+            break_flag=break_flag,
+        )
 
 
 # ---------------------------------------------------------------------------
