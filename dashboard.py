@@ -191,22 +191,44 @@ for i, kpi_key in enumerate(config.DISPLAY_KPI_KEYS):
     obs_label = f"{kpi_def['label']} — {latest_obs.strftime('%b %Y')}"
 
     with cols[i]:
-        # Determine delta color based on KPI favourability:
-        #   - "normal": green for positive, red for negative (default Streamlit logic)
-        #   - "inverse": green for negative, red for positive (for u_rate where decrease is good)
-        #   - "off": gray regardless (for neutral KPIs like labour force size)
+        # st.metric draws its OWN arrow when we pass a numeric string as delta.
+        # We pass delta_str_no_arrow (without our manual arrow) to avoid
+        # double arrows. Then we control direction via delta_arrow and
+        # color via delta_color based on KPI favourability:
+        #   - "normal": green for positive, red for negative (default)
+        #   - "inverse": green for negative, red for positive (decrease is good)
+        #   - "off": gray regardless (neutral KPIs like labour force size)
         favorability = get_favorability(kpi_key)
+        if favorability == "neutral":
+            delta_color = "off"
+        elif favorability == "down":
+            delta_color = "inverse"  # green when decrease (negative delta)
+        else:
+            delta_color = "normal"   # green when increase (positive delta)
 
-        # We pass the formatted string delta (no floating-point artifacts)
-        # and use delta_color="off" since string deltas don't support
-        # automatic coloring. Color semantics are conveyed via the arrows
-        # and the MoM/YoY caption lines below.
-        st.metric(
-            label=obs_label,
-            value=formatted_value,
-            delta=mom_display.delta_str,
-            delta_color="off",
-        )
+        # Map internal direction to Streamlit's delta_arrow values
+        if mom_display.direction == "up":
+            delta_arrow = "up"
+        elif mom_display.direction == "down":
+            delta_arrow = "down"
+        else:
+            delta_arrow = "right"
+
+        if mom_display.delta_str == "N/A":
+            st.metric(
+                label=obs_label,
+                value=formatted_value,
+                delta=None,
+                delta_color="off",
+            )
+        else:
+            st.metric(
+                label=obs_label,
+                value=formatted_value,
+                delta=mom_display.delta_str_no_arrow,
+                delta_color=delta_color,
+                delta_arrow=delta_arrow,
+            )
 
         # Build the secondary line: context + trend-break flag
         secondary_parts = []
@@ -219,7 +241,7 @@ for i, kpi_key in enumerate(config.DISPLAY_KPI_KEYS):
         if secondary_text:
             st.caption(f"ℹ️ {secondary_text}")
 
-        # MoM and YoY with consistent labels
+        # MoM and YoY with consistent labels — arrow comes from delta_str
         st.caption(f"MoM: {mom_display.delta_str}" + mom_display.break_flag)
         st.caption(f"YoY: {yoy_display.delta_str}" + yoy_display.break_flag)
 

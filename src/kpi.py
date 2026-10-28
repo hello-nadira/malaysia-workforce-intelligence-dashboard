@@ -68,6 +68,10 @@ class ChangeDisplay:
     ----------
     delta_str : str
         Primary directional string, e.g. "↓ 0.1 pp", "↑ +1.2%", "N/A"
+    delta_str_no_arrow : str
+        Same as delta_str but with the leading arrow removed.
+        Use this when passing to st.metric's delta parameter to avoid
+        double arrows (our arrow + Streamlit's automatic arrow).
     context_str : str
         Secondary labeled context for rate KPIs, e.g. "rel: +3.3%", or ""
     direction : str
@@ -78,6 +82,7 @@ class ChangeDisplay:
         " *trend-break*" if comparison crosses the Jan 2025 break, else ""
     """
     delta_str: str
+    delta_str_no_arrow: str
     context_str: str
     direction: str
     is_favorable: bool
@@ -292,6 +297,7 @@ def format_change(kpi_key: str, change: KPIChange) -> ChangeDisplay:
     """
     na_display = ChangeDisplay(
         delta_str="N/A",
+        delta_str_no_arrow="N/A",
         context_str="",
         direction="none",
         is_favorable=True,
@@ -321,7 +327,9 @@ def format_change(kpi_key: str, change: KPIChange) -> ChangeDisplay:
 
         favorable = is_favorable_change(kpi_key, direction)
 
-        delta_str = f"{_arrow(direction)} {abs(delta_pp):.1f} pp"
+        arrow = _arrow(direction)
+        delta_str = f"{arrow} {abs(delta_pp):.1f} pp"
+        delta_no_arrow = f"{abs(delta_pp):.1f} pp"
 
         # Secondary: relative % change labeled as "rel:"
         context_str = ""
@@ -332,6 +340,7 @@ def format_change(kpi_key: str, change: KPIChange) -> ChangeDisplay:
 
         return ChangeDisplay(
             delta_str=delta_str,
+            delta_str_no_arrow=delta_no_arrow,
             context_str=context_str,
             direction=direction,
             is_favorable=favorable,
@@ -352,10 +361,21 @@ def format_change(kpi_key: str, change: KPIChange) -> ChangeDisplay:
 
         favorable = is_favorable_change(kpi_key, direction)
 
-        delta_str = f"{_arrow(direction)} {change.delta_percent:+.1f}%"
+        arrow = _arrow(direction)
+        delta_str = f"{arrow} {change.delta_percent:+.1f}%"
+
+        # For st.metric: strip the arrow, let Streamlit render its own
+        # The sign in delta_percent already indicates direction
+        if change.delta_percent > 0:
+            delta_no_arrow = f"+{change.delta_percent:.1f}%"
+        elif change.delta_percent < 0:
+            delta_no_arrow = f"{change.delta_percent:.1f}%"
+        else:
+            delta_no_arrow = f"{change.delta_percent:.1f}%"
 
         return ChangeDisplay(
             delta_str=delta_str,
+            delta_str_no_arrow=delta_no_arrow,
             context_str="",
             direction=direction,
             is_favorable=favorable,

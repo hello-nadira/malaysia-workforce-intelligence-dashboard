@@ -609,7 +609,101 @@ class TestFormatChangeEdgeCases:
 
 
 # ---------------------------------------------------------------------------
-# Favorability logic
+# Single-arrow guarantee tests
+# ---------------------------------------------------------------------------
+
+class TestSingleArrowGuarantee:
+    """
+    Verify that each formatted badge contains exactly ONE directional arrow,
+    and that delta_str_no_arrow contains ZERO arrows (for st.metric).
+    """
+
+    _ARROW_CHARS = ["\u2191", "\u2193", "\u2192", "\u2190", "\u2196", "\u2197", "\u2198", "\u2199"]
+
+    def _count_arrows(self, s: str) -> int:
+        """Count all directional arrow characters in a string."""
+        return sum(s.count(arrow) for arrow in self._ARROW_CHARS)
+
+    def test_rate_delta_str_has_exactly_one_arrow_up(self):
+        change = KPIChange(
+            current_value=3.5, previous_value=3.0, delta_value=0.5,
+            delta_percent=16.67,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False, is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("u_rate", change)
+        assert self._count_arrows(result.delta_str) == 1
+        assert self._count_arrows(result.delta_str_no_arrow) == 0
+
+    def test_rate_delta_str_has_exactly_one_arrow_down(self):
+        change = KPIChange(
+            current_value=2.5, previous_value=3.0, delta_value=-0.5,
+            delta_percent=-16.67,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False, is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("u_rate", change)
+        assert self._count_arrows(result.delta_str) == 1
+        assert self._count_arrows(result.delta_str_no_arrow) == 0
+
+    def test_count_delta_str_has_exactly_one_arrow(self):
+        change = KPIChange(
+            current_value=110.0, previous_value=105.0, delta_value=5.0,
+            delta_percent=4.76,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False, is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("lf", change)
+        assert self._count_arrows(result.delta_str) == 1
+        assert self._count_arrows(result.delta_str_no_arrow) == 0
+
+    def test_floating_point_rate_no_arrow_duplication(self):
+        """Even with float artifacts, only one arrow should appear."""
+        change = KPIChange(
+            current_value=2.9, previous_value=3.0,
+            delta_value=-0.10000000000000009,  # float artifact
+            delta_percent=-3.3333333333333335,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False, is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("u_rate", change)
+        assert self._count_arrows(result.delta_str) == 1
+        assert "10000000" not in result.delta_str
+
+    def test_na_result_has_no_arrow(self):
+        change = KPIChange(
+            current_value=3.5, previous_value=None,
+            delta_value=None, delta_percent=None,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=None,
+            crosses_trend_break=False, is_missing_comparison=True,
+            comparison_type="MoM",
+        )
+        result = format_change("u_rate", change)
+        assert self._count_arrows(result.delta_str) == 0
+        assert result.delta_str == "N/A"
+
+    def test_delta_str_no_arrow_has_no_arrow_chars(self):
+        """delta_str_no_arrow must never contain any arrow character."""
+        change = KPIChange(
+            current_value=3.5, previous_value=3.0, delta_value=0.5,
+            delta_percent=16.67,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False, is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("u_rate", change)
+        assert self._count_arrows(result.delta_str_no_arrow) == 0
+        assert result.delta_str_no_arrow == "0.5 pp"
 # ---------------------------------------------------------------------------
 
 class TestFavorability:
