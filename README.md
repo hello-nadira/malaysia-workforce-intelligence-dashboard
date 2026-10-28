@@ -12,10 +12,6 @@ An executive-ready business intelligence dashboard that visualises Malaysia's mo
 
 This project uses Python, Pandas, Streamlit and Plotly to turn monthly labour force statistics into an interactive dashboard for exploring Malaysia's employment conditions.
 
-## Overview
-
-This project uses Python, Pandas, Streamlit and Plotly to turn monthly labour force statistics into an interactive dashboard for exploring Malaysia's employment conditions.
-
 ## Features
 
 - **Key performance indicators:** Labour force, employment, unemployment, participation rate and employment-to-population ratio, as implemented in the dashboard.
