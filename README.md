@@ -6,8 +6,8 @@ An executive-ready business intelligence dashboard that visualises Malaysia's mo
 
 ## Dashboard Preview
 
-![Malaysia Workforce Intelligence Dashboard](screenshots/Malaysia%20Workforce%20Intelligence.png)
-
+![Malaysia Workforce Intelligence Dashboard]
+<img width="1402" alt="Malaysia Workforce Intelligence Dashboard" src="https://github.com/user-attachments/assets/32fd571b-5d11-44b8-b7ae-27fc4e2ad4db" />
 ## Overview
 
 This project uses Python, Pandas, Streamlit and Plotly to turn monthly labour force statistics into an interactive dashboard for exploring Malaysia's employment conditions.
