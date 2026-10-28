@@ -44,7 +44,6 @@ from src.kpi import (
     get_available_date_range,
     get_latest_kpi,
     get_favorability,
-    is_favorable_change,
 )
 from src.metadata import (
     get_data_summary_text,
@@ -197,42 +196,17 @@ for i, kpi_key in enumerate(config.DISPLAY_KPI_KEYS):
         #   - "inverse": green for negative, red for positive (for u_rate where decrease is good)
         #   - "off": gray regardless (for neutral KPIs like labour force size)
         favorability = get_favorability(kpi_key)
-        if favorability == "neutral":
-            delta_color = "off"
-        elif favorability == "down":
-            delta_color = "inverse"  # green when decrease (negative delta)
-        else:
-            delta_color = "normal"   # green when increase (positive delta)
 
-        # For st.metric color to work, we need a numeric delta.
-        # We pass the numeric change and let Streamlit color the arrow.
-        # But our delta_str already contains the formatted text with arrow.
-        # Approach: use st.metric with the string delta for display,
-        # and set delta_color based on favourability.
-        # Streamlit won't auto-color string deltas, so we use "off" for
-        # string deltas and rely on the arrow direction itself + the
-        # separate MoM/YoY caption lines for color semantics.
-        #
-        # Better approach: pass numeric delta with delta_color for coloring,
-        # use delta_description for the unit.
-        if not mom_change.is_missing_comparison:
-            if kpi_key in config.RATE_KPI_KEYS:
-                metric_delta = mom_change.delta_value  # pp
-            else:
-                metric_delta = mom_change.delta_percent  # relative %
-            st.metric(
-                label=obs_label,
-                value=formatted_value,
-                delta=metric_delta,
-                delta_color=delta_color,
-            )
-        else:
-            st.metric(
-                label=obs_label,
-                value=formatted_value,
-                delta=None,
-                delta_color="off",
-            )
+        # We pass the formatted string delta (no floating-point artifacts)
+        # and use delta_color="off" since string deltas don't support
+        # automatic coloring. Color semantics are conveyed via the arrows
+        # and the MoM/YoY caption lines below.
+        st.metric(
+            label=obs_label,
+            value=formatted_value,
+            delta=mom_display.delta_str,
+            delta_color="off",
+        )
 
         # Build the secondary line: context + trend-break flag
         secondary_parts = []

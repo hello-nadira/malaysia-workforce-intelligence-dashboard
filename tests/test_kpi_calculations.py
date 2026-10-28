@@ -428,6 +428,24 @@ class TestFormatChangeRate:
         result = format_change("u_rate", change)
         assert result.break_flag == ""
 
+    def test_rate_kpi_floating_point_artifacts_cleansed(self):
+        """Floating-point artifacts like -0.10000000000000009 should be rounded to 0.1 pp."""
+        change = KPIChange(
+            current_value=2.9,
+            previous_value=3.0,
+            delta_value=-0.10000000000000009,  # classic float artifact
+            delta_percent=-3.3333333333333335,
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
+            is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("u_rate", change)
+        assert "0.1" in result.delta_str
+        assert "10000000" not in result.delta_str
+        assert result.context_str == "rel: -3.3%"
+
 
 # ---------------------------------------------------------------------------
 # format_change — count KPI
@@ -516,6 +534,23 @@ class TestFormatChangeCount:
         )
         result = format_change("lf", change)
         assert result.context_str == ""
+
+    def test_count_kpi_floating_point_artifacts_cleansed(self):
+        """Floating-point artifacts like 0.099999999999999432 should be rounded to 0.1%."""
+        change = KPIChange(
+            current_value=110.1,
+            previous_value=110.0,
+            delta_value=0.1,
+            delta_percent=0.099999999999999432,  # classic float artifact
+            current_date=pd.Timestamp("2025-02-01"),
+            previous_date=pd.Timestamp("2025-01-01"),
+            crosses_trend_break=False,
+            is_missing_comparison=False,
+            comparison_type="MoM",
+        )
+        result = format_change("lf", change)
+        assert "+0.1%" in result.delta_str
+        assert "999999999999432" not in result.delta_str
 
 
 # ---------------------------------------------------------------------------
