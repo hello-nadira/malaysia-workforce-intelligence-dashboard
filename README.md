@@ -6,7 +6,7 @@ An executive-ready business intelligence dashboard that visualises Malaysia's mo
 
 ## Dashboard Preview
 
-![Malaysia Workforce Intelligence Dashboard](screenshots/dashboard.png)
+![Malaysia Workforce Intelligence Dashboard](screenshots/Malaysia%20Workforce%20Intelligence.png)
 
 An executive-ready business intelligence dashboard that visualises Malaysia's monthly labour force statistics using official open data from the Department of Statistics Malaysia (DOSM).
 
