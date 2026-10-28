@@ -1,6 +1,6 @@
 # Malaysia Workforce Intelligence Dashboard
 
-**[View Live Dashboard](https://malaysia-workforce-intelligence-dashboard-zp3od2bwek7daqeapt4t.streamlit.app)** | **[View Source Code on GitHub](https://github.com/hello-nadira/malaysia-workforce-intelligence-dashboard)**
+**[🚀 View Live Dashboard](https://malaysia-workforce-intelligence-dashboard-zp3od2bwek7daqeapt4t.streamlit.app)** | **[💻 View Source Code on GitHub](https://github.com/hello-nadira/malaysia-workforce-intelligence-dashboard)**
 
 An executive-ready business intelligence dashboard that visualises Malaysia's monthly labour force statistics using official open data from the Department of Statistics Malaysia (DOSM).
 
@@ -8,7 +8,9 @@ An executive-ready business intelligence dashboard that visualises Malaysia's mo
 
 ![Malaysia Workforce Intelligence Dashboard](screenshots/Malaysia%20Workforce%20Intelligence.png)
 
-An executive-ready business intelligence dashboard that visualises Malaysia's monthly labour force statistics using official open data from the Department of Statistics Malaysia (DOSM).
+## Overview
+
+This project uses Python, Pandas, Streamlit and Plotly to turn monthly labour force statistics into an interactive dashboard for exploring Malaysia's employment conditions.
 
 ## Overview
 
@@ -23,9 +25,6 @@ This project uses Python, Pandas, Streamlit and Plotly to turn monthly labour fo
 - **Data caching and fallback:** Reuse cached data when the live data source is unavailable, with a warning when fallback data is used.
 - **Methodology awareness:** Flag the population-reference change introduced in 2025 when interpreting comparisons across that period.
 
-## Dashboard preview
-
-<img width="1402" height="779" alt="image" src="https://github.com/user-attachments/assets/32fd571b-5d11-44b8-b7ae-27fc4e2ad4db" />
 
 
 ## Quick start
@@ -33,8 +32,8 @@ This project uses Python, Pandas, Streamlit and Plotly to turn monthly labour fo
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/hello-nadira/malaysia-workforce-dashboard.git
-cd malaysia-workforce-dashboard
+git clone https://github.com/hello-nadira/malaysia-workforce-intelligence-dashboard.git
+cd malaysia-workforce-intelligence-dashboard
 ```
 
 ### 2. Create and activate a virtual environment (recommended)
