@@ -1,5 +1,13 @@
 # Malaysia Workforce Intelligence Dashboard
 
+**[View Live Dashboard](https://malaysia-workforce-intelligence-dashboard-zp3od2bwek7daqeapt4t.streamlit.app)** | **[View Source Code on GitHub](https://github.com/hello-nadira/malaysia-workforce-intelligence-dashboard)**
+
+An executive-ready business intelligence dashboard that visualises Malaysia's monthly labour force statistics using official open data from the Department of Statistics Malaysia (DOSM).
+
+## Dashboard Preview
+
+![Malaysia Workforce Intelligence Dashboard](screenshots/dashboard.png)
+
 An executive-ready business intelligence dashboard that visualises Malaysia's monthly labour force statistics using official open data from the Department of Statistics Malaysia (DOSM).
 
 ## Overview
